@@ -1,26 +1,28 @@
 #### Preamble ####
-# Purpose: Downloads and saves the data from [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 11 February 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Downloads TTC LRT data and code descriptions from Open Data Toronto.
+# Author: Gerry Peng
+# Date: 24 September 2026
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
-
 
 #### Workspace setup ####
 library(opendatatoronto)
 library(tidyverse)
-# [...UPDATE THIS...]
 
 #### Download data ####
-# [...ADD CODE HERE TO DOWNLOAD...]
+raw_delays <- get_resource(
+  "9a800c92-0362-4cee-8232-7374596b6a43") #delay data
 
-
+code_descriptions <- get_resource(
+  "662bc8f7-887f-4112-8b8d-dbc6bc4ebfb1") #delay code meanings
 
 #### Save data ####
-# [...UPDATE THIS...]
-# change the_raw_data to whatever name you assigned when you downloaded it.
-write_csv(the_raw_data, "inputs/data/raw_data.csv") 
 
-         
+write_csv(
+  raw_delays,
+  "data/01-raw_data/lrt_delays.csv"
+)
+
+write_csv(
+  code_descriptions,
+  "data/01-raw_data/code_descriptions.csv"
+)

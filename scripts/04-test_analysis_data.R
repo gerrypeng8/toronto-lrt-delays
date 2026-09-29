@@ -1,69 +1,91 @@
 #### Preamble ####
-# Purpose: Tests... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 26 September 2024 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Tests the cleaned Toronto LRT delay analysis data, similar to checks done on the simulated data.
+# Author: Gerry Peng
+# Date: 25 September 2026
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
-
 
 #### Workspace setup ####
 library(tidyverse)
+library(arrow)
 library(testthat)
 
-data <- read_csv("data/02-analysis_data/analysis_data.csv")
+#### Read data ####
+analysis_data <- read_parquet("data/02-analysis_data/analysis_data.parquet") #data the paper will use
 
-
-#### Test data ####
-# Test that the dataset has 151 rows - there are 151 divisions in Australia
-test_that("dataset has 151 rows", {
-  expect_equal(nrow(analysis_data), 151)
+#### Tests ####
+test_that("analysis data has the expected structure", { #checking column names and row count
+  expected_columns <- c(
+    "date",
+    "line",
+    "time",
+    "day",
+    "station",
+    "code",
+    "min_delay",
+    "min_gap"
+  )
+  expect_equal(
+    names(analysis_data),
+    expected_columns
+  )
+  expect_equal(
+    nrow(analysis_data),
+    4562
+  )
 })
 
-# Test that the dataset has 3 columns
-test_that("dataset has 3 columns", {
-  expect_equal(ncol(analysis_data), 3)
+test_that("variables have correct type", {
+  date_check <- is.Date(analysis_data$date)
+  delay_check <- is.numeric(analysis_data$min_delay)
+  gap_check <- is.numeric(analysis_data$min_gap)
+  expect_true(date_check)
+  expect_true(delay_check)
+  expect_true(gap_check)
 })
 
-# Test that the 'division' column is character type
-test_that("'division' is character", {
-  expect_type(analysis_data$division, "character")
+test_that("Analysis data has no missing values", {
+  missing_check <- any(is.na(analysis_data))
+  expect_false(missing_check) #checking that there are not any missing values
 })
 
-# Test that the 'party' column is character type
-test_that("'party' is character", {
-  expect_type(analysis_data$party, "character")
+test_that("Dates are within the expected range", {
+  date_check <- all(
+    analysis_data$date >= as.Date("2025-12-07") &
+      analysis_data$date <= as.Date("2026-08-31")
+  )
+  expect_true(date_check)
 })
 
-# Test that the 'state' column is character type
-test_that("'state' is character", {
-  expect_type(analysis_data$state, "character")
+test_that("Delay and gap values are valid", {
+  #allowing duration values of 0 here
+  delay_check <- all(
+    analysis_data$min_delay >= 0
+  )
+  gap_check <- all(
+    analysis_data$min_gap >= 0
+  )
+  expect_true(delay_check)
+  expect_true(gap_check)
 })
 
-# Test that there are no missing values in the dataset
-test_that("no missing values in dataset", {
-  expect_true(all(!is.na(analysis_data)))
+test_that("text variables aren't empty", {
+  line_check <- all(
+    analysis_data$line != ""
+  )
+  station_check <- all(
+    analysis_data$station != ""
+  )
+  code_check <- all(
+    analysis_data$code != ""
+  )
+  expect_true(line_check)
+  expect_true(station_check)
+  expect_true(code_check)
 })
 
-# Test that 'division' contains unique values (no duplicates)
-test_that("'division' column contains unique values", {
-  expect_equal(length(unique(analysis_data$division)), 151)
-})
-
-# Test that 'state' contains only valid Australian state or territory names
-valid_states <- c("New South Wales", "Victoria", "Queensland", "South Australia", "Western Australia", 
-                  "Tasmania", "Northern Territory", "Australian Capital Territory")
-test_that("'state' contains valid Australian state names", {
-  expect_true(all(analysis_data$state %in% valid_states))
-})
-
-# Test that there are no empty strings in 'division', 'party', or 'state' columns
-test_that("no empty strings in 'division', 'party', or 'state' columns", {
-  expect_false(any(analysis_data$division == "" | analysis_data$party == "" | analysis_data$state == ""))
-})
-
-# Test that the 'party' column contains at least 2 unique values
-test_that("'party' column contains at least 2 unique values", {
-  expect_true(length(unique(analysis_data$party)) >= 2)
+test_that("Primary LRT lines are there", {
+  ec_check <- "EC" %in% analysis_data$line
+  fw_check <- "FW" %in% analysis_data$line
+  expect_true(ec_check)
+  expect_true(fw_check)
 })

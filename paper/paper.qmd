@@ -1,13 +1,16 @@
 ---
-title: "My title"
-subtitle: "My subtitle if needed"
-author: 
-  - First author
-  - Another author
-thanks: "Code and data are available at: [https://github.com/RohanAlexander/starter_folder](https://github.com/RohanAlexander/starter_folder)."
+title: "Frequent LRT Incidents Are Not Always the Most Disruptive"
+subtitle: "Comparing incident frequency and recorded delay in Toronto's LRT network"
+author:
+  - Gerry Peng
+thanks: "Code and data are available at: https://github.com/gerrypeng8/toronto-lrt-delays."
 date: today
 date-format: long
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+abstract: "Toronto's light rail transit system often experiences delays for many different reasons. However, some issues occur frequently and have impacted many 
+riders, while other incidents are rare but account for very long delays. Using TTC LRT incident records from December 2025 through August 2026, this paper 
+compares each incident frequency with the total amount of delay time it has caused. The results show that many common incident types contribute relatively little 
+delay while some less common incidents account for much more delay time, demonstrating that incident frequency alone 
+does not give the full context of disruptions on the LRT network."
 format: pdf
 number-sections: true
 bibliography: references.bib
@@ -19,241 +22,304 @@ bibliography: references.bib
 #| message: false
 
 library(tidyverse)
-library(palmerpenguins)
+library(arrow)
+library(tinytable)
+
+analysis_data <- read_parquet(
+  "../data/02-analysis_data/analysis_data.parquet"
+)
+
+code_descriptions <- read_csv(
+  "../data/01-raw_data/code_descriptions.csv",
+)
 ```
 
 
 # Introduction
 
-Overview paragraph
+Many people rely on public transit to reach work, school, and other important destinations. Incidents occurring on the light rail transit system arise from equipment problems, infrastructure defects, security risks, weather, and so on. Examining which issues occur most often is one approach to understanding service reliability, but frequency alone does not account for how much total delay is associated with each incident and may give an incomplete picture.
 
-Estimand paragraph
+This paper reviews the recorded incidents that caused a delay on the light rail transit network using data published through Toronto Open Data [@toronto_lrt]. It looks at whether the incidents that occur most often are also the ones that account for the greatest amount of recorded delay or not. The two measures compared are the incident frequency (measured by how many delays occurred with each cause) and the total recorded delay (measured by the sum of delayed minutes for each cause).
 
-Results paragraph
+The results show that these measures do not always point to the same incident type. For example, incidents involving equipment failures are the most frequently recorded events, but do not account for nearly as much total delay time as track switch failures, which occur less frequently. Furthermore, many recorded incidents have zero delay minutes, showing that in some cases an incident does not correspond to a significant disruption in service. Considering both measures may provide a better idea of which incident types deserve more attention than looking at frequency alone.
 
-Why it matters paragraph
-
-Telegraphing paragraph: The remainder of this paper is structured as follows. @sec-data....
-
-
-
-
-
+The distinction between frequency and delay matters because they describe different aspects of service reliability. The remainder of this paper is structured as follows. @sec-data describes the dataset, its measurement, and variables used in the analysis. @sec-results compares incident frequency with total recorded delay time across causes. @sec-discussion discusses the interpretation of these results, their limitations, and possible directions for future work.
 
 # Data {#sec-data}
 
 ## Overview
 
-We use the statistical programming language R [@citeR].... Our data [@shelter].... Following @tellingstories, we consider...
+The LRT incident data comes from the Toronto Open Data TTC LRT Delay Data dataset [@toronto_lrt]. The dataset has records of incidents impacting Toronto's light rail transit service. This includes information about the date, time, line, station, incident code, recorded delay, and service gap. The data was downloaded reproducibly using the opendatatoronto
+package [@opendatatoronto] and processed using R [@citeR].
+The analysis uses the tidyverse [@tidyverse], including ggplot2
+for figures [@citeggplot], tinytable for tables [@tinytable], and
+arrow for storing and reading the cleaned analysis dataset [@arrow].
 
-Overview text
+After removing seven observations that had some row data missing, the analysis dataset contained 4562 observations. The records cover 7 December 2025 to 31 August 2026. This means that December 2025 only represents a partial month.
+
+The analysis focuses on the variables date, line, station, code, min_delay, and min_gap. Incident code meanings are connected to descriptions from the code-description file that also came with the dataset. The main outcome used in the analysis is the recorded delay in minutes.
+
+A similar dataset available through Toronto Open Data is the TTC Streetcar Delay Data dataset [@ttc_streetcar_delay]. It also records transit delays and their causes. This paper uses the TTC LRT Delay Data because the research question concerns incident patterns on Toronto's LRT network, and the dataset provides the incident codes, delay minutes, service gaps, stations, and lines needed for this analysis.
+
+This dataset consists of administrative records, which matters because the analysis reflects incidents that were recorded and categorized by the transit system. The dataset doesn't provide a complete description of all of the internal rules involved in deciding when or how an event becomes a recorded incident. This analysis describes the published records rather than every service problem experienced by passengers.
+
 
 ## Measurement
-	
-Some paragraphs about how we go from a phenomena in the world to an entry in the dataset.
 
-## Outcome variables
+Each row in the dataset represents an LRT incident. An operational event is recorded with information such as time, location, line, incident code, delay minutes, and service gap. The code-description file is then used to translate the incident code into its corresponding description to make it more understandable.
 
-Add graphs, tables and text. Use sub-sub-headings for each outcome variable or update the subheading to be singular.
+The variable min_delay records the number of delay minutes associated with an incident. The variable min_gap records the corresponding service gap in minutes. These are related but measure different things, since min_delay describes recorded service delay, while min_gap describes the spacing in service caused by the incident.
 
+An important part of these records is that an incident can appear even when zero delay minutes are recorded. Of the 4562 observations used in this analysis, 1903 have zero recorded delay minutes. A row in the dataset represents an operational incident, but not necessarily an incident that produced a noteworthy delay. There are also multiple very large delays. The largest observation is 971 minutes of delay time (over 16 hours), while other observations exceed 300 minutes. These observations are retained because they are present in the source data and are part of the variation the analysis is intended to describe.
 
-
-Some of our data is of penguins (@fig-bills), from @palmerpenguins.
+@tbl-example-records shows some sample observations from the cleansed dataset. The table shows the columns present and the variables used throughout the paper.
 
 ```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
+#| label: tbl-example-records
+#| tbl-cap: "Example records from the Toronto LRT delay data. Delay and gap are measured in minutes."
 #| echo: false
+#| warning: false
+#| message: false
+#| tbl-pos: H
 
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+table_1_data <- analysis_data |>
+  left_join(
+    code_descriptions,
+    by= c("code" = "CODE")
+  ) |>
+  mutate(
+    delay_cause = case_when(
+      code == "SXGDS" ~ "Intrusion Detection System",
+      code == "MXPAA" ~ "EA - no trouble found",
+      code == "EXATC" ~ "S&TCS carborne equipment",
+      code == "EXGA" ~ "GIDS activation",
+      !is.na(DESCRIPTION) ~ str_to_sentence(DESCRIPTION),
+      TRUE ~ code
+  )
+  ) |>
+  select(
+    Date = date,
+    Line = line,
+    Station = station,
+    Cause = delay_cause,
+    Delay = min_delay,
+    Gap = min_gap
+  ) |>
+  slice_head(n = 4)
+tt(table_1_data)
 ```
 
-Talk more about it.
+The observations show that different types of incidents can have different recorded effects. For example, some incidents only have a few minutes recorded but the service gap is much longer. They also show some of the incident categories contained in the records.
 
-And also planes (@fig-planes). (You can change the height and width, but don't worry about doing that until you have finished every other aspect of the paper - Quarto will try to make it look nice and the defaults usually work well once you have enough text.)
+
+## Recorded delay
+
+@fig-delay-distribution shows the distribution of delays across all observations. The horizontal axis is scaled so that both the large number of observations near zero and the small amount of extreme delays stay visible.
 
 ```{r}
-#| label: fig-planes
-#| fig-cap: Relationship between wing length and width
+#| label: fig-delay-distribution
+#| fig-cap: "Distribution of LRT delay across all 4562 incidents. Most observations have short delays, while a small number extend to several hours."
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 7
+#| fig-height: 4
+#| fig-align: center
+
+analysis_data |>
+  ggplot(aes(x = min_delay))+
+  geom_histogram(bins = 50) +
+  scale_x_continuous(trans = scales::pseudo_log_trans(base = 10),breaks = c(0,1,5,10,25,50,100,250,500,1000), labels = scales::comma) +
+  scale_y_continuous(labels = scales::comma)+
+  labs(x = "Recorded delay (minutes)", y= "Number of incidents") +
+  theme_minimal()
+```
+
+Most recorded incidents are concentrated and cluster at low delay durations. However, the distribution has a small number of incidents with very long delays. This is relevant to the averages because these observations can have a strong influence on means and total delay time.
+
+@tbl-summary-statistics summarizes the two main values we are investigating, recorded delay and recorded gap. The zero duration column reports the percentage of observations for which the corresponding value had 0 minutes.
+
+```{r}
+#| label: tbl-summary-statistics
+#| tbl-cap: "Summary statistics for recorded LRT delays and service gaps. Zero duration is the percentage of observations equal to zero, all other statistics except N are measured in minutes."
 #| echo: false
 #| warning: false
 #| message: false
 
-analysis_data <- read_csv(here::here("data/02-analysis_data/analysis_data.csv"))
-
-analysis_data |> 
-  ggplot(aes(x = width, y = length)) +
-  geom_point(alpha = 0.8) +
-  theme_minimal() +
-  labs(x = "Wing width (mm)",
-       y = "Wing length (mm)")
-```
-
-Talk way more about it. 
-
-## Predictor variables
-
-Add graphs, tables and text.
-
-Use sub-sub-headings for each outcome variable and feel free to combine a few into one if they go together naturally.
-
-
-
-
-
-
-
-
-# Model
-
-The goal of our modelling strategy is twofold. Firstly,...
-
-Here we briefly describe the Bayesian analysis model used to investigate... Background details and diagnostics are included in [Appendix -@sec-model-details].
-
-## Model set-up
-
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
-
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
-\end{align}
-
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
-
-
-### Model justification
-
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
-
-We can use maths by including latex between dollar signs, for instance $\theta$.
-
-
-# Results
-
-Our results are summarized in @tbl-modelresults.
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
-
-library(rstanarm)
-
-first_model <-
-  readRDS(file = here::here("models/first_model.rds"))
-```
-
-```{r}
-#| echo: false
-#| eval: true
-#| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
-#| warning: false
-
-modelsummary::modelsummary(
-  list(
-    "First model" = first_model
+table_2_data <- tibble(
+  Variable = c(
+    "Recorded delay",
+    "Recorded gap"
   ),
-  statistic = "mad",
-  fmt = 2
-)
+  N = c(
+    nrow(analysis_data),
+    nrow(analysis_data)
+  ),
+  `Zero duration` = c(
+    mean(analysis_data$min_delay == 0) * 100,
+    mean(analysis_data$min_gap == 0) * 100
+  ),
+  Median = c(
+    median(analysis_data$min_delay),
+    median(analysis_data$min_gap)
+  ),
+  Mean = c(
+    mean(analysis_data$min_delay),
+    mean(analysis_data$min_gap)
+  ),
+  Max = c(
+    max(analysis_data$min_delay),
+    max(analysis_data$min_gap)
+  )
+) |>
+  mutate(
+    N = scales::comma(N),
+    `Zero duration` = round(`Zero duration`, 1),
+    Median = round(Median, 1),
+    Mean = round(Mean, 1),
+    Max = scales::comma(Max)
+  )
+names(table_2_data)[3] <-"Zero duration (\\%)"
+
+
+tt(table_2_data)
 ```
 
+The median recorded delay is 3 minutes, and the mean is 8.5 minutes. The maximum is 971 minutes. The difference between median and mean makes sense given the strongly right skewed distribution visible in @fig-delay-distribution.
+
+The large share of zero delay observations is also important. For recorded delay, 41.7 per cent of incidents have a value of zero. This helps explain why a cause can appear frequently in the incident records without necessarily contributing a similarly large amount of total delay.
 
 
+# Results {#sec-results}
 
-# Discussion
+This section compares how often each incident cause occurs with the total number of delay minutes associated with that cause.
 
-## First discussion point {#sec-first-point}
+## The most frequent causes
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
-
-## Second discussion point
-
-Please don't use these as sub-heading labels - change them to be what your point actually is.
-
-## Third discussion point
-
-## Weaknesses and next steps
-
-Weaknesses and next steps should also be included.
-
-\newpage
-
-\appendix
-
-# Appendix {-}
-
-
-# Additional data details
-
-# Model details {#sec-model-details}
-
-## Posterior predictive check
-
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
-
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
+@fig-frequency shows the ten most frequently recorded incident causes. "Equipment - other" is the most frequently recorded cause with 392 incidents, followed by Intrusion Detection System incidents with 356 and "EA - no trouble found" with 338.
 
 ```{r}
-#| eval: true
+#| label: fig-frequency
+#| fig-cap: "Top ten most frequently recorded LRT incident causes."
 #| echo: false
-#| message: false
 #| warning: false
-#| label: fig-ppcheckandposteriorvsprior
-#| layout-ncol: 2
-#| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
+#| message: false
+#| fig-width: 7
+#| fig-height: 4.5
+#| fig-align: center
+#| fig-pos: H
 
-pp_check(first_model) +
-  theme_classic() +
-  theme(legend.position = "bottom")
+figure_1_data <- analysis_data |>
+  count(code, name = "incidents", sort = TRUE) |>
+  slice_head(n = 10) |>
+  left_join(code_descriptions, by = c("code" = "CODE")) |>
+  mutate(delay_cause = case_when(
+      code == "SXGDS" ~ "Intrusion Detection System",
+      code == "MXPAA" ~ "EA - no trouble found",
+      code == "EXATC" ~ "S&TCS carborne equipment",
+      code == "EXGA" ~ "GIDS activation",
+      !is.na(DESCRIPTION) ~ str_to_sentence(DESCRIPTION),
+      TRUE ~ code
+      ),
+    delay_cause = fct_reorder(delay_cause, incidents)
+  )
 
-posterior_vs_prior(first_model) +
+figure_1_data |>
+  ggplot(aes(x = incidents, y = delay_cause)) +
+  geom_col() +
+  geom_text(aes(label = incidents), hjust = -0.2, size = 3.2) +
+  labs(
+    title = "Some LRT incident causes occur far more often than others",
+    subtitle = "Ten most frequently recorded causes, 7 December 2025 to 31 August 2026",
+    x = "Number of recorded incidents",
+    y = "Incident cause"
+  ) +
+  scale_x_continuous(limits = c(0, 450), breaks = seq(0, 400, 100), expand = expansion(mult = c(0, 0.02))) +
   theme_minimal() +
-  scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "bottom") +
-  coord_flip()
+  theme(plot.title = element_text(face = "bold",size = 12), plot.subtitle = element_text(size = 9), axis.text.y = element_text(
+      size = 7.5), panel.grid.major.y = element_blank())
 ```
 
-## Diagnostics
+The ranking in @fig-frequency describes which incident types appear most often in the records. It does not show if those same causes account for the greatest amount of accumulated delay.
 
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
 
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
+## The causes associated with the most delay
+
+@fig-total-delay ranks incident causes by the total number of recorded delay minutes associated with them.
 
 ```{r}
+#| label: fig-total-delay
+#| fig-cap: "The ten LRT incident causes associated with the greatest total recorded delay. The ranking differs from the ranking based only on incident frequency."
 #| echo: false
-#| eval: true
-#| message: false
 #| warning: false
-#| label: fig-stanareyouokay
-#| fig-cap: "Checking the convergence of the MCMC algorithm"
-#| fig-subcap: ["Trace plot", "Rhat plot"]
-#| layout-ncol: 2
+#| message: false
+#| fig-width: 7
+#| fig-height: 4.5
+#| fig-align: center
+#| fig-pos: H
 
-plot(first_model, "trace")
+code_summary <- analysis_data |>
+  group_by(code) |>
+  summarise(incidents = n(), total_delay = sum(min_delay), average_delay = mean(min_delay), .groups = "drop")
+figure_2_data <- code_summary |>
+  left_join(code_descriptions, by = c("code" = "CODE")) |>
+  arrange(desc(total_delay)) |>
+  slice_head(n = 10) |>
+  mutate(
+    delay_cause = case_when(
+      code == "SXGDS" ~ "Intrusion Detection System",
+      code == "MXPAA" ~ "EA - no trouble found",
+      code == "EXATC" ~ "S&TCS carborne equipment",
+      code == "EXGA" ~ "GIDS activation",
+      !is.na(DESCRIPTION) ~ str_to_sentence(DESCRIPTION),
+      TRUE ~ paste0(code," (description unavailable)")
+    ),
+    delay_cause = fct_reorder(delay_cause, total_delay)
+  )
 
-plot(first_model, "rhat")
+figure_2_data |>
+  ggplot(aes(x = total_delay, y = delay_cause)) +
+  geom_col() +
+  geom_text(aes(label = scales::comma(total_delay)), hjust = -0.15, size = 3.2) +
+  labs(
+    title = "The most frequent causes are not always the most disruptive",
+    subtitle = "Ten causes with the most total recorded delay, 7 December 2025 to 31 August 2026",
+    x = "Total recorded delay (minutes)",
+    y = "Incident cause"
+  ) +
+  scale_x_continuous(limits = c(0, 7200), breaks = seq(0, 6000, 2000), labels = scales::comma, expand = expansion(mult = c(0, 0.01))) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 12), plot.subtitle = element_text(size = 9),
+    axis.text.y = element_text(size = 7.5), panel.grid.major.y = element_blank())
 ```
 
+Track switch failures make up the most recorded delay in the dataset, with 6485 minutes across 205 incidents. Brake related incidents are second with 4479 minutes across 301 incidents. By comparison, "Equipment - other" is the most frequently recorded category but accounts for 3038 total delay minutes.
+
+The differences become particularly obvious for more rare causes. Overhead defects occurred only 20 times but account for 1826 minutes of recorded delay. As a result their average recorded delay was approximately 91 minutes per incident. This makes overhead defects one of the biggest delays by duration despite their relatively small number of incidents.
+
+The reverse also appears. "EA - no trouble found" happened 338 times but accounts for only 478 total recorded delay minutes. Of those 338 observations, 201 have zero recorded delay. This makes sense, since these likely wouldn't cause much of a holdup. Frequent appearance in the operational records therefore does not imply a large contribution to total recorded delay.
 
 
-\newpage
+# Discussion {#sec-discussion}
+
+## Frequency and delay describe different aspects of disruption
+
+The main finding is that incident frequency and total recorded delay give different views of LRT reliability. A certain type of incident can happen often while producing relatively little accumulated delay, while another category can occur far less often but contribute a large amount of delay when it does happen.
+This difference is clear when comparing @fig-frequency and @fig-total-delay. Equipment related categories dominate the frequency ranking, while track and overhead related problems become more prominent when incidents are ranked by their total delay.
+
+The results therefore show that incident counts should not be used as a complete measure of importance. Frequency captures how often an event is recorded, whereas total delay captures a perspective on the amount of service disruption associated with those events.
+
+The high proportion of observations that had no delay time demonstrates why the measurement process matters. An incident may be important enough to get logged in the operational records even when it didn't cause any actual delay. Incident frequency therefore measures the occurrence of recorded events rather than the occurrence of positive delays alone.
+At the other side of the distribution, a small number of events have very large recorded delay values. For example, an overhead defect at Leaside Station on 20 May 2026 has 971 recorded delay minutes. Those kinds of observations greatly impact totals and averages even though they represent a very small share of the incidents.
+These two characteristics of the data help explain why rankings based on frequency and total delay differ. One measure gives the same weight to every recorded incident, while the other gives much greater weight to incidents associated with unusually large delay values.
+
+## Limitations and next steps
+
+Several limitations affect the interpretation of these findings. Firstly, the dataset covers less than one year, from December 2025 through August 2026. The results only describe this time period and should not automatically be treated as long run patterns in the LRT system. December is also not a full month because the records begin on December 7.
+Secondly, the analysis relies on administrative data published by the TTC. The results depend on which events are recorded and how those events get categorized. A zero minute value for recorded delay does not necessarily mean that an incident had no operational consequences, it means just that zero delay minutes were recorded for that incident.
+
+Finally, the analysis is descriptive and does not establish causal relationships. Differences in recorded delay may also be associated with location, line, time of day, weather, or other operating conditions. 
+Future work could compare the Eglinton Crosstown and Finch West lines separately, examine station-level patterns, or review a longer time range once additional LRT data becomes available. A longer time series would make it easier to differentiate actual patterns from unusual incidents concentrated in this time period.
 
 
 # References
-
-

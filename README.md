@@ -2,20 +2,20 @@
 
 ## Overview
 
-This repository contains the data, code, and paper for an analysis of recorded delays on Toronto's LRT network.
+This repository contains the data, R scripts, and files used to analyze delay incidents on Toronto's light rail transit network. The analysis compares how frequently different incident causes occur with the total amount of recorded delay associated with them. The data is from the TTC LRT Delay Data dataset available through Toronto Open Data.
 
 ## File Structure
 
-The repository is structured as:
+The repository is organized as follows:
 
-- `data/00-simulated_data` contains simulated data used to develop and test the workflow.
-- `data/01-raw_data` contains the raw data obtained from Open Data Toronto.
-- `data/02-analysis_data` contains the cleaned data used in the analysis.
-- `other/llm_usage` contains documentation of LLM usage.
-- `other/sketches` contains sketches used to plan figures and tables.
-- `paper` contains the Quarto document, bibliography, and final PDF.
-- `scripts` contains the R scripts used to simulate, test, download, clean, and analyze the data.
+- `data/00-simulated_data`: simulated data used to test the analysis workflow.
+- `data/01-raw_data`: original TTC LRT delay data and incident code descriptions.
+- `data/02-analysis_data`: cleaned data used in the analysis.
+- `scripts`: R scripts used to simulate, download, clean, and test the data.
+- `paper`: the Quarto file, bibliography, and PDF for the final paper.
+- `other/sketches`: sketches used to plan the figures in the paper.
+- `other/llm_usage`: documentation of LLM usage for this project.
 
-## Statement on LLM Usage
+## Statement on LLM usage
 
-ChatGPT was used to assist with project planning, code development, debugging, and writing. The relevant chat history is documented in `other/llm_usage/usage.txt`.
+Code completion was used while writing some of the R code, and ChatGPT was used for help with understanding code, writing, and reviewing the paper. The conversation used is in `other/llm_usage/usage.txt`.

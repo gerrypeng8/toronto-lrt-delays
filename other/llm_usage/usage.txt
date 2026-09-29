@@ -1,0 +1,35 @@
+LLM: ChatGPT
+Summary of LLM usage
+User: I need to make simulated data first, what columns should I have for the LRT data?
+LLM: You could include date, line, station, incident code, delay minutes, and service gap. You can make vectors of possible values and sample from them.
+User: What are some basic tests I should do on the simulated data?
+LLM: Check the column names, row count, valid line values, positive delay and gap values, missing values, and the date range.
+User: What does %in% do in R?
+LLM: It checks whether values belong to a set. For example:
+simulated_data$line %in% c("EC", "FW")
+User: I have the resource ids for the delay data and code descriptions, how do I just download them?
+LLM: Use get_resource() from opendatatoronto and then save the files locally with write_csv().
+User: For cleaning I only want the columns I actually need, how should I do that?
+LLM: Rename the variables, keep the needed columns with select(), convert the date, and remove rows with a missing line.
+User: If I use rename does that also remove the other columns?
+LLM: No. rename() only changes the names. You still need select() to remove columns.
+User: What tests should I do on the cleaned real data?
+LLM: Check the expected columns, row count, variable types, missing values, date range, non-negative delay and gap values, and the expected LRT lines.
+User: I want the paper to compare which incidents happen a lot and which ones have a lot of delay, how should I set that up?
+LLM: Compare the number of recorded incidents for each cause with the total recorded delay minutes associated with that cause.
+User: I want the table to show descriptions instead of just codes, how can I do that?
+LLM: Join the cleaned data to the code-description file using the incident code, then keep the columns you want to display.
+User: What does TRUE ~ code mean in case_when?
+LLM: It is the fallback. If none of the earlier conditions match, it keeps the original code value.
+User: There are a lot of delay values close to zero but a few huge ones, how should I graph that?
+LLM: A histogram works well. A transformed x-axis can help keep both the small values and extreme values visible.
+User: I want a table with N, percent zero, median, mean and max for delay and gap. What's the easiest way?
+LLM: You can calculate each value directly. For example:
+mean(analysis_data$min_delay == 0) * 100
+gives the percentage of observations with zero recorded delay.
+User: How should I make the main frequency graph?
+LLM: Count incidents by cause, sort them, keep the top ten, and use a horizontal bar chart.
+User: And then for total delay?
+LLM: Group by incident code and sum the delay values, then sort by total delay and keep the top ten.
+User: Can you look over the paper and tell me if anything is unnecessary or confusing?
+LLM: The overall structure works. The main suggestions were to simplify some headings and code, improve table and figure labels, avoid unsupported causal wording, and fix small grammar and formatting issues.

@@ -1,52 +1,79 @@
 #### Preamble ####
-# Purpose: Simulates a dataset of Australian electoral divisions, including the 
-  #state and party that won each division.
-# Author: Rohan Alexander
-# Date: 26 September 2024
-# Contact: rohan.alexander@utoronto.ca
+# Purpose: Simulates a dataset of Toronto LRT delay incidents.
+# Author: Gerry Peng
+# Date: 24 September 2026
+# Contact: gerry.peng@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: The `tidyverse` package must be installed
-# Any other information needed? Make sure you are in the `starter_folder` rproj
-
 
 #### Workspace setup ####
+# load package and set random seed for reproducibility
 library(tidyverse)
 set.seed(853)
 
-
 #### Simulate data ####
-# State names
-states <- c(
-  "New South Wales",
-  "Victoria",
-  "Queensland",
-  "South Australia",
-  "Western Australia",
-  "Tasmania",
-  "Northern Territory",
-  "Australian Capital Territory"
+#amount of simulated delays
+n_delays <- 500
+
+#possible LRT lines
+lines <- c("EC","FW")
+
+#potential station names
+stations <- c(
+  "Mount Dennis",
+  "Keelesdale",
+  "Caledonia",
+  "Fairbank",
+  "Oakwood",
+  "Cedarvale",
+  "Eglinton",
+  "Science centre",
+  "Kennedy",
+  "Finch west",
+  "Jane and Finch",
+  "Humber college")
+#some delay codes that happen on the TTC (stred in vector)
+codes <- c(
+  "EXO",
+  "SXGDS",
+  "MXPAA",
+  "EXBK",
+  "PXSW",
+  "SXUEG")
+#making simulated delays
+simulated_data <- tibble(
+  date = sample(
+    seq(
+      as.Date("2025-12-01"), #converting to date
+      as.Date("2026-08-31"),
+      by = "day" ), #spacing them each out by 1 day
+    size = n_delays,
+    replace = TRUE ), #multiple incidents on the same date allowed
+#choosing 500 sample lines, stations, codes , delays, and gaps 
+  line = sample(
+    lines,
+    size = n_delays,
+    replace = TRUE),
+
+  station = sample(
+    stations,
+    size = n_delays,
+    replace = TRUE),
+
+  code = sample(
+    codes,
+    size = n_delays,
+    replace = TRUE),
+
+  min_delay = sample(
+    1:40,
+    n_delays,
+    replace = TRUE),
+
+  min_gap = sample(
+    1:50,
+    n_delays,
+    replace = TRUE)
 )
-
-# Political parties
-parties <- c("Labor", "Liberal", "Greens", "National", "Other")
-
-# Create a dataset by randomly assigning states and parties to divisions
-analysis_data <- tibble(
-  division = paste("Division", 1:151),  # Add "Division" to make it a character
-  state = sample(
-    states,
-    size = 151,
-    replace = TRUE,
-    prob = c(0.25, 0.25, 0.15, 0.1, 0.1, 0.1, 0.025, 0.025) # Rough state population distribution
-  ),
-  party = sample(
-    parties,
-    size = 151,
-    replace = TRUE,
-    prob = c(0.40, 0.40, 0.05, 0.1, 0.05) # Rough party distribution
-  )
-)
-
 
 #### Save data ####
-write_csv(analysis_data, "data/00-simulated_data/simulated_data.csv")
+write_csv(simulated_data, "data/00-simulated_data/simulated_data.csv")

@@ -57,7 +57,7 @@ arrow for storing and reading the cleaned analysis dataset [@arrow].
 
 After removing seven observations that had some row data missing, the analysis dataset contained 4562 observations. The records cover 7 December 2025 to 31 August 2026. This means that December 2025 only represents a partial month.
 
-The analysis focuses on the variables date, line, station, code, min_delay, and min_gap. Incident code meanings are connected to descriptions from the code-description file that also came with the dataset. The main outcome used in the analysis is the recorded delay in minutes.
+The main variables used in the analysis are incident code and recorded delay. Recorded service gap provides extra information about disruption, and date, line, and station give some context for each incident. Incident code meanings are connected to descriptions from the code-description file that also came with the dataset.
 
 A similar dataset available through Toronto Open Data is the TTC Streetcar Delay Data dataset [@ttc_streetcar_delay]. It also records transit delays and their causes. This paper uses the TTC LRT Delay Data because the research question concerns incident patterns on Toronto's LRT network, and the dataset provides the incident codes, delay minutes, service gaps, stations, and lines needed for this analysis.
 
@@ -69,6 +69,26 @@ This dataset consists of administrative records, which matters because the analy
 Each row in the dataset represents an LRT incident. An operational event is recorded with information such as time, location, line, incident code, delay minutes, and service gap. The code-description file is then used to translate the incident code into its corresponding description to make it more understandable.
 
 The variable min_delay records the number of delay minutes associated with an incident. The variable min_gap records the corresponding service gap in minutes. These are related but measure different things, since min_delay describes recorded service delay, while min_gap describes the spacing in service caused by the incident.
+
+@fig-delay-gap shows the relationship between recorded delay and service gap.
+
+```{r}
+#| label: fig-delay-gap
+#| fig-cap: "Relationship between recorded delay and service gap."
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-width: 7
+#| fig-height: 4
+
+analysis_data |>
+  ggplot(aes(x = min_delay, y = min_gap)) +
+  geom_point(alpha= 0.2) +
+  labs(x = "Recorded delay (minutes)", y = "Recorded service gap (minutes)") +
+  theme_minimal()
+```
+
+Larger recorded delays usually occur with long service gaps, but there is variation between incidents.
 
 An important part of these records is that an incident can appear even when zero delay minutes are recorded. Of the 4562 observations used in this analysis, 1903 have zero recorded delay minutes. A row in the dataset represents an operational incident, but not necessarily an incident that produced a noteworthy delay. There are also multiple very large delays. The largest observation is 971 minutes of delay time (over 16 hours), while other observations exceed 300 minutes. These observations are retained because they are present in the source data and are part of the variation the analysis is intended to describe.
 
